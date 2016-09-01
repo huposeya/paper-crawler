@@ -1,49 +1,51 @@
-__author__ = 'huposeya'
 # -*- coding:utf-8 -*-
-#单页文章的下载，以标题.pdf的形式保存
+__author__ = 'huposeya'
+# 单页文章的下载，以标题.pdf的形式保存
 
 import requests
 from bs4 import BeautifulSoup
+
 
 class papercrawler:
     def __init__(self, url):
         self.url = url
 
-    #获取网页源码
-    def getsoup(self):
+    # 获取基本信息
+    def get_basic_info(self):
         try:
+            print('requesting %s' % self.url) # 增加一个提示，程序正在发送请求
             response = requests.get(self.url)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            return soup
         except requests.HTTPError as e:
             if hasattr(e, 'reason'):
                 print('连接失败,错误原因', e.reason)
-                return None
+            else:
+                print('连接失败, 未知原因')
+            return None # 无论是否捕捉到异常，都有返回
 
-    #获取title
-    def gettitle(self):
-        soup = self.getsoup()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
         titledata = soup.select('meta[name="citation_title"]')
-        title = titledata[0]['content']
-        print(titledata[0]['content'])
-        return title
-
-    #获取下载链接
-    def geturl(self):
-        soup = self.getsoup()
+        self.title = titledata[0]['content']
+        # 变量前加self.可传递至其他function（）
         urlpagedata = soup.select('meta[name="citation_pdf_url"]')
-        urlpage = urlpagedata[0]['content']
-        print(urlpagedata[0]['content'])
-        return urlpage
+        self.pdf_url = urlpagedata[0]['content']
 
-    #下载pdf到本地
+        return soup
+
+    # 下载pdf到本地
     def downloadpdf(self):
-        title = self.gettitle()
-        urlpage = self.geturl()
-        responsepage = requests.get(urlpage)
-        pdfname = str(title) + '.pdf'
+        self.get_basic_info()
+        responsepage = requests.get(self.pdf_url)
+
+        pdfname = str(self.title) + '.pdf'
         with open(pdfname, 'wb') as f:
             f.write(responsepage.content)
 
-paper = papercrawler('http://arxiv.org/abs/1608.07531')
-paper.downloadpdf()
+
+def main(url):
+    paper = papercrawler(url)
+    paper.downloadpdf()
+
+if __name__ == '__main__':
+    url = 'http://arxiv.org/abs/1608.07531'
+    main(url)
